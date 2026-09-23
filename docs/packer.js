@@ -1,6 +1,7 @@
 import { PackArchive } from './archive.js';
-import { safePath, resolveDatabase } from './database.js';
+import { safePath, resolveDatabase } from './database.js?v=dds-1';
 import { readDDS, appendLowMips } from './dds.js';
+import { pngToDDS } from './convert.js';
 const LIMIT=512*1024*1024;
 class Cache {
   constructor(){this.parts=[];this.size=0;}
@@ -20,31 +21,41 @@ export async function pack(entries,onProgress=()=>{}) {
   let db;
   try {db=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(configBytes));}
   catch {throw new Error('rt64.json is not valid UTF-8 JSON.');}
-  const {textures,extras,warnings}=resolveDatabase(db,files);
+  const {textures,extras,warnings,mappings}=resolveDatabase(db,files);
+  const converted=new Map(textures.filter(t=>/\.png$/i.test(t.path)).map(t=>[t.path,t.path.replace(/\.png$/i,'.dds')]));
+  const outputs=new Set();
+  for(const path of [...textures.map(t=>converted.get(t.path)??t.path),...extras]) {
+    if(outputs.has(path.toLowerCase()))throw new Error(`DDS conversion would overwrite another file: ${path}`);
+    outputs.add(path.toLowerCase());
+  }
+  // Pin resolved operations when extensions change, including *.png filters.
+  for(const {texture,path,operation} of mappings)if(converted.has(path)) {
+    texture.path=converted.get(path);texture.operation=operation;
+  }
+  if(db.extraFiles)db.extraFiles=db.extraFiles.map(path=>converted.get(safePath(path))??path);
   if(textures.length+extras.length+2>60000)throw new Error('This pack has too many files for the browser packer. Use the native tool.');
   const selected=[...textures.map(t=>t.path),...extras];
   if(selected.reduce((n,path)=>n+files.get(path).size,0)>LIMIT)throw new Error('The selected pack exceeds 512 MB. Use the native packer for larger packs.');
   const zip=new PackArchive(LIMIT);
   const cache=new Cache();let done=0,ddsCount=0,pngCount=0;
   for(const t of textures) {
-    const bytes=new Uint8Array(await files.get(t.path).arrayBuffer());
+    let bytes=new Uint8Array(await files.get(t.path).arrayBuffer());
+    const output=converted.get(t.path)??t.path;
     try {
-      if(/\.dds$/i.test(t.path)) {
-        readDDS(bytes);ddsCount++;
-        if(t.stream)appendLowMips(bytes,t.path,cache);
-      } else {
-        if(bytes.length<24 || ![137,80,78,71,13,10,26,10].every((v,i)=>bytes[i]===v))throw new Error('Invalid PNG signature');
-        pngCount++;
+      if(converted.has(t.path)) {
+        onProgress({done,total:selected.length,path:t.path,stage:'converting'});
+        bytes=await pngToDDS(bytes);pngCount++;
       }
+      readDDS(bytes);ddsCount++;
+      if(t.stream)appendLowMips(bytes,output,cache);
     } catch(error){throw new Error(`${t.path}: ${error.message}`);}
-    await zip.add(t.path,[bytes]);onProgress({done:++done,total:selected.length,path:t.path});
+    await zip.add(output,[bytes]);onProgress({done:++done,total:selected.length,path:t.path});
   }
   for(const path of extras){await zip.add(path,[new Uint8Array(await files.get(path).arrayBuffer())],true);onProgress({done:++done,total:selected.length,path});}
-  await zip.add('rt64.json',[configBytes]);
+  await zip.add('rt64.json',[converted.size?new TextEncoder().encode(JSON.stringify(db,null,2)):configBytes]);
   // Rebuild from the selected DDS files; never reuse a potentially stale input cache.
   await zip.add('rt64-low-mip-cache.bin',cache.parts);
   cache.parts=[];
   const blob=zip.finish();
-  if(pngCount)warnings.push(`${pngCount} PNG texture${pngCount===1?'':'s'} included. DDS with mipmaps is recommended for release packs.`);
   return {blob,textures:textures.length,ddsCount,pngCount,cacheBytes:cache.size,warnings};
 }

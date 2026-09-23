@@ -14,14 +14,14 @@ $('folder').addEventListener('change',()=>{
   $('select').disabled=true;$('cancel').hidden=false;
   const name=(files[0].webkitRelativePath.split('/')[0]||'textures').replace(/[^a-zA-Z0-9._-]/g,'-').slice(0,100);
   const entries=files.map(file=>({path:file.webkitRelativePath.split('/').slice(1).join('/'),file}));
-  try {worker=new Worker(new URL('./worker.js?v=zstd-1',import.meta.url),{type:'module'});}
+  try {worker=new Worker(new URL('./worker.js?v=dds-1',import.meta.url),{type:'module'});}
   catch {fail('This browser could not start the packer. Try a current desktop browser.');return;}
   worker.onerror=()=>fail('The packer stopped unexpectedly. Try a smaller pack or reload this page.');
   worker.onmessage=({data})=>{
     if(data.type==='error')fail(data.message);
     else if(data.type==='progress'){
       $('progress').max=data.total;$('progress').value=data.done;
-      $('status').textContent=`Packing ${data.done.toLocaleString()} of ${data.total.toLocaleString()} files`;
+      $('status').textContent=data.stage==='converting'?`Converting texture ${(data.done+1).toLocaleString()} of ${data.total.toLocaleString()} to DDS…`:`Packing ${data.done.toLocaleString()} of ${data.total.toLocaleString()} files`;
     } else if(data.type==='complete'){
       stop();const r=data.result;
       $('status').textContent='Your texture pack is ready';

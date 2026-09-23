@@ -37,7 +37,7 @@ export function resolveDatabase(db,files) {
     const list=automatic.get(key)??[];list.push(path);automatic.set(key,list);
   }
   const selected=new Map(),hashes=new Set();
-  const warnings=[];
+  const warnings=[],mappings=[];
   for(const t of db.textures) {
     if(!t || !/^[0-9a-fA-F]{1,16}$/.test(t.hashes?.rt64??'')) throw new Error('Each texture needs a valid RT64 hash');
     const hash=BigInt('0x'+t.hashes.rt64).toString(16);
@@ -63,6 +63,7 @@ export function resolveDatabase(db,files) {
       operation=defaultOp;
       for(const filter of filters)if(wildcard(path,filter.wildcard.replaceAll('\\','/')))operation=filter.operation??'stream';
     }
+    mappings.push({texture:t,path,operation});
     const entry=selected.get(path)??{path,stream:false};
     entry.stream ||= operation==='stream';selected.set(path,entry);
   }
@@ -71,5 +72,5 @@ export function resolveDatabase(db,files) {
   if(!Array.isArray(extra))throw new Error('extraFiles must be an array');
   const extras=[];
   for(const raw of extra){const path=safePath(raw);if(!files.has(path))throw new Error(`Missing extra file: ${path}`);if(!['rt64.json','rt64-low-mip-cache.bin'].includes(path)&&!selected.has(path))extras.push(path);}
-  return {textures:[...selected.values()].sort((a,b)=>a.path<b.path?-1:a.path>b.path?1:0),extras:[...new Set(extras)].sort(),warnings};
+  return {textures:[...selected.values()].sort((a,b)=>a.path<b.path?-1:a.path>b.path?1:0),extras:[...new Set(extras)].sort(),warnings,mappings};
 }

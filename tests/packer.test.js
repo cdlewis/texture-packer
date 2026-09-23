@@ -6,7 +6,10 @@ import {pack} from '../docs/packer.js';
 import {readFileSync} from 'node:fs';
 import {initZstd} from '../docs/zstd.js';
 import {readArchive} from './archive-reader.js';
+import {initBasis} from '../docs/convert.js';
+import {png} from './png-fixtures.js';
 await initZstd(readFileSync(new URL('../docs/vendor/zstd/zstd.wasm',import.meta.url)));
+await initBasis(readFileSync(new URL('../docs/vendor/basis/basis_encoder.wasm',import.meta.url)));
 const unzipSync=bytes=>readArchive(bytes).files;
 import {dds,db,file,hash,cacheWriter,merge} from './fixtures.js';
 const lookup=paths=>new Map(paths.map(p=>[p,new Blob()]));
@@ -65,11 +68,24 @@ test('pack contains exact selected files, original database, fresh cache, and Zs
   assert.equal(new TextDecoder().decode(zip['rt64.json']),config);assert.deepEqual(zip['art/texture.dds'],bytes);
   assert.ok(zip['rt64-low-mip-cache.bin'].length>100);assert.equal(r.textures,1);assert.equal(progress.at(-1).done,2);
 });
-test('PNG-only pack has empty cache and an on-page note',async()=>{
-  const png=new Uint8Array(24);png.set([137,80,78,71,13,10,26,10]);
-  const r=await pack([file('rt64.json',JSON.stringify(db())),file('art/texture.png',png)]);
+test('PNG is converted, renamed, mapped, and included in the fresh cache',async()=>{
+  const r=await pack([file('rt64.json',JSON.stringify(db())),file('art/texture.png',png())]);
   const zip=unzipSync(new Uint8Array(await r.blob.arrayBuffer()));
-  assert.equal(zip['rt64-low-mip-cache.bin'].length,0);assert.equal(r.pngCount,1);assert.match(r.warnings[0],/DDS/);
+  assert.ok(zip['rt64-low-mip-cache.bin'].length>0);assert.equal(r.pngCount,1);assert.equal(r.ddsCount,1);assert.equal(r.warnings.length,0);
+  assert.ok(!zip['art/texture.png']);assert.equal(readDDS(zip['art/texture.dds']).mips,4);
+  const database=JSON.parse(new TextDecoder().decode(zip['rt64.json']));
+  assert.equal(database.textures[0].path,'art/texture.dds');
+  assert.equal(resolveDatabase(database,new Map(Object.keys(zip).map(p=>[p,new Blob()]))).textures[0].stream,true);
+});
+test('conversion preserves PNG operation filters, shared mappings, Rice paths and extraFiles',async()=>{
+  const database=db([{hashes:{rt64:hash,rice:'1234abcd#2#0'}},{hashes:{rt64:'1'},path:'GAME#1234abcd#2#0_all.png',operation:'stall'}],{autoPath:'rice'});
+  database.operationFilters=[{wildcard:'*.png',operation:'preload'}];database.extraFiles=['GAME#1234abcd#2#0_all.png'];
+  const r=await pack([file('rt64.json',JSON.stringify(database)),file('GAME#1234abcd#2#0_all.png',png())]);
+  const zip=unzipSync(new Uint8Array(await r.blob.arrayBuffer())),out=JSON.parse(new TextDecoder().decode(zip['rt64.json']));
+  assert.equal(r.cacheBytes,0);assert.equal(r.pngCount,1);
+  assert.deepEqual(out.textures.map(t=>t.operation),['preload','stall']);
+  assert.deepEqual(out.extraFiles,['GAME#1234abcd#2#0_all.dds']);
+  assert.equal(resolveDatabase(out,new Map(Object.keys(zip).map(p=>[p,new Blob()]))).textures.length,1);
 });
 test('preloaded DDS is packed but excluded from cache',async()=>{
   const r=await pack([file('rt64.json',JSON.stringify(db(undefined,{defaultOperation:'preload'}))),file('art/texture.dds',dds())]);

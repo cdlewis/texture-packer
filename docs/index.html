@@ -6,14 +6,14 @@
   <meta name="description" content="Create an RT64 texture pack in your browser. Select a pack folder and download an RTZ file.">
   <title>RT64 Texture packer</title>
   <link rel="stylesheet" href="./style.css">
-  <script type="module" src="./app.js?v=zstd-1"></script>
+  <script type="module" src="./app.js?v=dds-1"></script>
 </head>
 <body>
   <main>
     <header class="intro"><h1>RT64 Texture packer</h1></header>
     <section class="converter" aria-label="Texture packer">
       <h2>Pack folder in. RTZ out.</h2>
-      <p class="hint">Select the folder containing <code>rt64.json</code> and your texture images.</p>
+      <p class="hint">Select the folder containing <code>rt64.json</code> and your PNG or DDS textures. PNGs are converted to DDS automatically.</p>
       <button class="primary" id="select" type="button">Select pack folder</button>
       <input id="folder" type="file" webkitdirectory multiple hidden>
       <div id="result" hidden>

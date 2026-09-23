@@ -20,7 +20,7 @@ int main(int argc,char**argv){std::ofstream out(argv[2],std::ios::binary);for(in
     (work/'native.cpp').write_text(cpp)
     subprocess.run(['clang++','-std=c++17','-I'+str(root/'src/contrib'),str(work/'native.cpp'),'-o',str(work/'native')],check=True)
     subprocess.run(['node','tests/native-fixtures.js',str(work)],check=True)
-    paths=[f'fixture-{i}.dds' for i in range(8)]
+    paths=[f'fixture-{i}.dds' for i in range(11)]
     subprocess.run([str(work/'native'),str(work),str(work/'native.bin'),*paths],check=True)
     actual=(work/'native.bin').read_bytes();expected=(work/'javascript.bin').read_bytes()
     assert actual==expected, f'Cache mismatch: native={len(actual)}, JS={len(expected)}'
