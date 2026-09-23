@@ -10,8 +10,10 @@ Errors prevent a partial pack download. Unmatched automatic mappings are shown a
 
 ## Compatibility
 
-- Produces standard ZIP/Deflate `.rtz` files, equivalent to the native packer's `--deflate` mode.
-  This does not use RT64's default Zstandard compression.
+- Produces Zstandard `.rtz` archives using ZIP method 93, as supported by RT64.
+  Compression runs through a bundled WebAssembly codec at level 9 to bound browser work,
+  rather than the native tool's maximum level. Extra files use Deflate, matching RT64;
+  entries are stored uncompressed when compression would increase their size.
 - Resolves explicit paths, RT64 hash filenames, and Rice filenames; prefers DDS over PNG.
 - Preserves the original `rt64.json` bytes and image contents.
 - Honors per-texture operations, operation filters in order, and `extraFiles`.
@@ -38,6 +40,8 @@ No build step is needed. For GitHub Pages, select the `main` branch and `/docs` 
 
 ## Tests
 
+Requires Node.js 22.15+ with native Zstandard support in `node:zlib`.
+
 ```sh
 npm test
 ```
@@ -46,6 +50,9 @@ Synthetic fixtures cover DDS headers, mip extraction and alignment, database res
 contents, and invalid input. No game assets are included. Native cache parity can be checked with
 `tests/check-native.py /path/to/rt64`; it compiles the upstream extraction routine into a temporary
 command-line helper and compares its output with the browser implementation.
+`tests/check-native-archive.py /path/to/rt64 [zstd-prefix]` additionally compiles RT64's
+actual ZIP reader and verifies that it extracts each Zstandard/Deflate/stored entry
+byte-for-byte. It requires clang and libzstd (default prefix: `/opt/homebrew`).
 
 ## References
 
@@ -53,4 +60,5 @@ command-line helper and compares its output with the browser implementation.
 - [RT64 texture packer source](https://github.com/rt64/rt64/blob/main/src/tools/texture_packer/texture_packer.cpp).
 - RT64-derived database and cache logic retains the RT64 MIT license in `docs/vendor/rt64-LICENSE.txt`.
 - DDS header interpretation follows ddspp; its MIT license is in `docs/vendor/ddspp-LICENSE.txt`.
+- @bokuweb/zstd-wasm 0.0.27 is vendored in `docs/vendor/zstd`, including its MIT/BSD licenses.
 - fflate 0.8.2 is vendored under its MIT license in `docs/vendor`.

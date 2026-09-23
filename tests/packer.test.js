@@ -3,7 +3,11 @@ import assert from 'node:assert/strict';
 import {readDDS,appendLowMips} from '../docs/dds.js';
 import {resolveDatabase,safePath} from '../docs/database.js';
 import {pack} from '../docs/packer.js';
-import {unzipSync} from '../docs/vendor/fflate.js';
+import {readFileSync} from 'node:fs';
+import {initZstd} from '../docs/zstd.js';
+import {readArchive} from './archive-reader.js';
+await initZstd(readFileSync(new URL('../docs/vendor/zstd/zstd.wasm',import.meta.url)));
+const unzipSync=bytes=>readArchive(bytes).files;
 import {dds,db,file,hash,cacheWriter,merge} from './fixtures.js';
 const lookup=paths=>new Map(paths.map(p=>[p,new Blob()]));
 test('DDS legacy and DX10 formats, offsets, and truncated data',()=>{
@@ -51,12 +55,12 @@ test('missing explicit mappings, unsafe paths, extras, and duplicate hashes fail
   const database=db();database.extraFiles=['missing.txt'];assert.throws(()=>resolveDatabase(database,lookup(['art/texture.dds'])),/Missing extra/);
   database.extraFiles=[];database.textures.push(database.textures[0]);assert.throws(()=>resolveDatabase(database,lookup(['art/texture.dds'])),/Duplicate/);
 });
-test('pack contains exact selected files, original database, fresh cache, and Deflate',async()=>{
+test('pack contains exact selected files, original database, fresh cache, and Zstandard',async()=>{
   const database=db();database.extraFiles=['credits.txt'];const config=JSON.stringify(database,null,2),bytes=dds();
   const entries=[file('rt64.json',config),file('art/texture.dds',bytes),file('art/texture.png','unused'),file('credits.txt','credit'),file('unused.dds','unused'),file('rt64-low-mip-cache.bin','stale')];
   const progress=[];const r=await pack(entries,p=>progress.push(p));
   const archive=new Uint8Array(await r.blob.arrayBuffer()),zip=unzipSync(archive);
-  assert.equal(new DataView(archive.buffer).getUint16(8,true),8);
+  assert.equal(new DataView(archive.buffer).getUint16(8,true),93);
   assert.deepEqual(Object.keys(zip).sort(),['art/texture.dds','credits.txt','rt64-low-mip-cache.bin','rt64.json']);
   assert.equal(new TextDecoder().decode(zip['rt64.json']),config);assert.deepEqual(zip['art/texture.dds'],bytes);
   assert.ok(zip['rt64-low-mip-cache.bin'].length>100);assert.equal(r.textures,1);assert.equal(progress.at(-1).done,2);

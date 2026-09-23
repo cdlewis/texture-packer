@@ -1,4 +1,4 @@
-import { Zip, ZipDeflate } from './vendor/fflate.js';
+import { PackArchive } from './archive.js';
 import { safePath, resolveDatabase } from './database.js';
 import { readDDS, appendLowMips } from './dds.js';
 const LIMIT=512*1024*1024;
@@ -24,9 +24,7 @@ export async function pack(entries,onProgress=()=>{}) {
   if(textures.length+extras.length+2>60000)throw new Error('This pack has too many files for the browser packer. Use the native tool.');
   const selected=[...textures.map(t=>t.path),...extras];
   if(selected.reduce((n,path)=>n+files.get(path).size,0)>LIMIT)throw new Error('The selected pack exceeds 512 MB. Use the native packer for larger packs.');
-  const chunks=[];let archiveSize=0;
-  const zip=new Zip((error,data)=>{if(error)throw error;archiveSize+=data.length;if(archiveSize>LIMIT)throw new Error('The archive exceeds 512 MB. Use the native packer for larger packs.');chunks.push(data);});
-  function add(path,bytes){const stream=new ZipDeflate(path,{level:6});zip.add(stream);stream.push(bytes,true);}
+  const zip=new PackArchive(LIMIT);
   const cache=new Cache();let done=0,ddsCount=0,pngCount=0;
   for(const t of textures) {
     const bytes=new Uint8Array(await files.get(t.path).arrayBuffer());
@@ -39,15 +37,14 @@ export async function pack(entries,onProgress=()=>{}) {
         pngCount++;
       }
     } catch(error){throw new Error(`${t.path}: ${error.message}`);}
-    add(t.path,bytes);onProgress({done:++done,total:selected.length,path:t.path});
+    await zip.add(t.path,[bytes]);onProgress({done:++done,total:selected.length,path:t.path});
   }
-  for(const path of extras){add(path,new Uint8Array(await files.get(path).arrayBuffer()));onProgress({done:++done,total:selected.length,path});}
-  add('rt64.json',configBytes);
+  for(const path of extras){await zip.add(path,[new Uint8Array(await files.get(path).arrayBuffer())],true);onProgress({done:++done,total:selected.length,path});}
+  await zip.add('rt64.json',[configBytes]);
   // Rebuild from the selected DDS files; never reuse a potentially stale input cache.
-  const cacheEntry=new ZipDeflate('rt64-low-mip-cache.bin',{level:6});zip.add(cacheEntry);
-  for(const part of cache.parts)cacheEntry.push(part,false);
-  cacheEntry.push(new Uint8Array(),true);
-  zip.end();
+  await zip.add('rt64-low-mip-cache.bin',cache.parts);
+  cache.parts=[];
+  const blob=zip.finish();
   if(pngCount)warnings.push(`${pngCount} PNG texture${pngCount===1?'':'s'} included. DDS with mipmaps is recommended for release packs.`);
-  return {blob:new Blob(chunks,{type:'application/zip'}),textures:textures.length,ddsCount,pngCount,cacheBytes:cache.size,warnings};
+  return {blob,textures:textures.length,ddsCount,pngCount,cacheBytes:cache.size,warnings};
 }
