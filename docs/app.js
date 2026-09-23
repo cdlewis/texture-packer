@@ -14,7 +14,7 @@ $('folder').addEventListener('change',()=>{
   $('select').disabled=true;$('cancel').hidden=false;
   const name=(files[0].webkitRelativePath.split('/')[0]||'textures').replace(/[^a-zA-Z0-9._-]/g,'-').slice(0,100);
   const entries=files.map(file=>({path:file.webkitRelativePath.split('/').slice(1).join('/'),file}));
-  try {worker=new Worker(new URL('./worker.js',import.meta.url),{type:'module'});}
+  try {worker=new Worker(new URL('./worker.js?v=zstd-1',import.meta.url),{type:'module'});}
   catch {fail('This browser could not start the packer. Try a current desktop browser.');return;}
   worker.onerror=()=>fail('The packer stopped unexpectedly. Try a smaller pack or reload this page.');
   worker.onmessage=({data})=>{
