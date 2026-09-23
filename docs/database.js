@@ -1,3 +1,4 @@
+// RT64-derived format handling; see vendor/rt64-LICENSE.txt.
 const image = path => /\.(dds|png)$/i.test(path);
 const base = path => path.replace(/\.(dds|png)$/i,'');
 export function safePath(path) {
