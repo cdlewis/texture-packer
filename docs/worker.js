@@ -1,0 +1,5 @@
+import { pack } from './packer.js';
+self.onmessage=async({data})=>{
+  try {self.postMessage({type:'complete',result:await pack(data.entries,progress=>self.postMessage({type:'progress',...progress}))});}
+  catch(error){self.postMessage({type:'error',message:error.message||'Packing failed. Try a smaller pack.'});}
+};
