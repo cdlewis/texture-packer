@@ -52,4 +52,5 @@ command-line helper and compares its output with the browser implementation.
 - [RT64 texture-pack documentation](https://github.com/rt64/rt64/blob/main/TEXTURE-PACKS.md).
 - [RT64 texture packer source](https://github.com/rt64/rt64/blob/main/src/tools/texture_packer/texture_packer.cpp).
 - RT64-derived database and cache logic retains the RT64 MIT license in `docs/vendor/rt64-LICENSE.txt`.
+- DDS header interpretation follows ddspp; its MIT license is in `docs/vendor/ddspp-LICENSE.txt`.
 - fflate 0.8.2 is vendored under its MIT license in `docs/vendor`.
