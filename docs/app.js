@@ -7,7 +7,7 @@ $('cancel').addEventListener('click',()=>{stop();$('status').textContent='Packin
 $('folder').addEventListener('change',()=>{
   const files=Array.from($('folder').files);$('folder').value='';if(!files.length)return;
   stop();if(url)URL.revokeObjectURL(url);url=null;
-  for(const id of ['download','download-note','issues'])$(id).hidden=true;
+  for(const id of ['download','issues'])$(id).hidden=true;
   $('issue-list').replaceChildren();$('counts').textContent='';$('result').hidden=false;
   $('status').classList.remove('error');$('status').textContent='Checking your pack…';
   $('progress').hidden=false;$('progress').max=1;$('progress').value=0;
@@ -26,10 +26,10 @@ $('folder').addEventListener('change',()=>{
       stop();const r=data.result;
       $('status').textContent='Your texture pack is ready';
       $('counts').textContent=`${r.textures.toLocaleString()} textures · ${(r.blob.size/1024/1024).toFixed(1)} MB`;
-      $('progress').max=1;$('progress').value=1;
+      $('progress').hidden=true;
       if(r.warnings.length){$('issues').hidden=false;for(const warning of r.warnings){const li=document.createElement('li');li.textContent=warning;$('issue-list').append(li);}}
       url=URL.createObjectURL(r.blob);$('download').href=url;$('download').download=name+'.rtz';$('download').hidden=false;
-      $('download').click();$('download-note').hidden=false;
+      $('download').click();
     }
   };
   worker.postMessage({entries});

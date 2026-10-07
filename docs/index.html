@@ -5,25 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Create an RT64 texture pack in your browser. Select a pack folder and download an RTZ file.">
   <title>RT64 Texture packer</title>
-  <link rel="stylesheet" href="./style.css">
-  <script type="module" src="./app.js?v=dds-1"></script>
+  <link rel="stylesheet" href="./style.css?v=embed-2">
+  <script type="module" src="./app.js?v=embed-2"></script>
 </head>
 <body>
   <main>
     <header class="intro"><h1>RT64 Texture packer</h1></header>
     <section class="converter" aria-label="Texture packer">
-      <h2>Pack folder in. RTZ out.</h2>
-      <p class="hint">Select the folder containing <code>rt64.json</code> and your PNG or DDS textures. PNGs are converted to DDS automatically.</p>
-      <button class="primary" id="select" type="button">Select pack folder</button>
-      <input id="folder" type="file" webkitdirectory multiple hidden>
-      <div id="result" hidden>
-        <div class="status-row"><p id="status" role="status" aria-live="polite"></p><button id="cancel" class="text-button" type="button" hidden>Cancel</button></div>
-        <progress id="progress" max="1" value="0" aria-label="Packing progress"></progress>
-        <p id="counts" class="counts"></p>
-        <div class="actions"><a id="download" class="primary" hidden>Download RTZ</a></div>
-        <p id="download-note" class="hint" hidden>If your download didn’t start, use the download button.</p>
-        <details id="issues" hidden><summary>Notes</summary><ul id="issue-list"></ul></details>
+      <div class="content">
+        <div class="instructions">
+          <h2>Pack folder in. RTZ out.</h2>
+          <p class="hint">Select the folder containing <code>rt64.json</code> and your PNG or DDS textures. PNGs are converted to DDS automatically.</p>
+        </div>
+        <div id="result" hidden>
+          <div class="status-row"><p id="status" role="status" aria-live="polite"></p><button id="cancel" class="text-button" type="button" hidden>Cancel</button></div>
+          <progress id="progress" max="1" value="0" aria-label="Packing progress"></progress>
+          <p id="counts" class="counts"></p>
+          <details id="issues" hidden><summary>Notes</summary><ul id="issue-list"></ul></details>
+        </div>
       </div>
+      <div class="actions">
+        <button class="primary" id="select" type="button">Select pack folder</button>
+        <a id="download" class="primary" hidden>Download RTZ</a>
+      </div>
+      <input id="folder" type="file" webkitdirectory multiple hidden>
       <noscript><p class="error">Enable JavaScript to pack files in your browser.</p></noscript>
     </section>
   </main>
