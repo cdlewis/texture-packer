@@ -49,7 +49,7 @@ No build step is needed. For GitHub Pages, select the `main` branch and `/docs` 
 
 ## Tests
 
-Requires Node.js 22.15+ with native Zstandard support in `node:zlib`.
+Requires Node.js 22.15+ with native Zstandard support in `node:zlib`:
 
 ```sh
 npm test
